@@ -11,7 +11,7 @@ script and the project import are directly derieved from his work. The video
 he made in the provided link is worth watching.
 
 This covers Unity 5+. At the time of this writing this has been
-successfully used with Unity `5.2.2f1` and `Swift 2.1` under `Xcode 7.1`.
+successfully used with Unity `5.3.4f1` under `Xcode 7.3`.
 
 This works with storyboards.
 
@@ -77,8 +77,8 @@ Setting expectations, the project import process here takes some time,
 it's not instant, Unity generates a lot of files and Xcode has to import them
 all. So expect to stare a beachball for a few minuts while it does it's thing.
 
-Ok! Fire up Xcode and create a new `Swift` project or open an existing
-`Swift` project.
+Ok! Fire up Xcode and create a new `Objective-C` project or open an existing
+`Objective-C` project.
 
 Here is what we will be doing, this will seem like a lot, but it's pretty straight
 forward. You will fly through these steps minus the unity project import/cleanup
@@ -89,11 +89,11 @@ which is not diffiucilt, it's just time consuming given the number of files.
 - Add a new `run script` build phase
 - Import your unity project
 - Clean up your unity project
-- Add the `objc` folder in this repo with the new custom unity init and obj-c bridging header
-- Rename `main` in `main.mm` to anything else
-- Alter the application delegate and cerate a main.swift file.
+- Create and update a PrefixHeader.pch file
+- Modify the `main.m` to handle unity initialization
 - Wrap the UnityAppController into your application delegate
 - Adjust the `GetAppController` function in `UnityAppController.h`
+- Make few adjustments to support Vuforia
 - Go bananas, you did it! Add the unity view wherever you want!
 
 #### Add the Unity.xcconfig file provided in this repo
@@ -107,6 +107,7 @@ Set the project to use those settings.
 So that does a lot for you in terms of configuration, now we need to adjust 1 setting in it.
 Since we don't know where you decided to export your unity project too, you need to configure that.
 
+The default location is `${SOURCE_ROOT}/Unity`
 
 Open up your project's build settings and scroll all the way to bottom, you will see:
 
@@ -125,7 +126,7 @@ You can also adjust your
 UNITY_RUNTIME_VERSION
 ```
 
-If you are not using  `5.2.2f1`.
+If you are not using  `5.3.4f1`.
 
 
 #### Add a new `run script` build phase
@@ -172,18 +173,25 @@ The Unity.xcconfig we applied knows where they are for compiling purposes.
 - Remove `Unity/Classes/Native/*.h` 7:55- 8:44 in [www.the-nerd.be] video.
 
 
-#### Add the `objc` folder in this repo
+#### Create and update a PrefixHeader.pch file
 
-You can copy these if you want, they are tiny.
+This is all in the [www.the-nerd.be] video as well, begining at 14:55.
+Create a new `PrefixHeader.pch` file and place it in iOS project root directory, add file to your project and uncheck `Copy items if needed`.
+`Unity.xcconfig` will update Build Settings and link this file to your project.
 
-- `UnityBridge.h` is the `SWIFT_OBJC_BRIDGING_HEADER` specified in `Unity.xcconfig`
+Next find the Unity Prefix.pch file, located in `Classes` folder. Copy the content and paste it into our `PrefixHeader.pch` file(between `#define PrefixHeader_pch` and `#endif`).
+
+Now add `#import "UnityAppController.h"` under `#import <UIKit/UIKit.h>`
+
+#### Add the `UnityUtils` folder in this repo
+
+Copy these into our project.
+
 - `UnityUtils.h/mm` is our new custom init function.
 
-The new custom unity init function is pulled directly our of the main.mm file in your unity project.
-Swift does not have the same initialization convention as an objecitve-c app, so we are going to
-tweak things slightly.
+The new custom unity init function is pulled directly out of the main.mm file in your unity project.
 
-#### Rename `main` in `main.mm` to anything else
+#### Modify the `main.m` to handle unity initialization
 
 In your xcode project under `Unity/Classses` locate the `main.mm` file. Within that file locate
 
@@ -191,112 +199,105 @@ In your xcode project under `Unity/Classses` locate the `main.mm` file. Within t
 int main(int argc, char* argv[])
 ```
 Once you find that you can go ahead and see that `UnityUtils.mm`, which we imported
-above, is effectively this function. Should Unity change this initialization you will need
-to update your `UnityUtils.mm` file to match their initialization. Note that we don't
-copy the `UIApplicationMain` part. Swift will handle that.
+above, is effectively this function. If Unity change this initialization you will need
+to update your `UnityUtils.mm` file to match their initialization.
 
-Anyway, we need to rename this function to anything but `main`:
+Anyway, now we need to update our `main.m`.
 
+First, rename our `main.m` to `main.mm`.
+Second, import `UnityUtils.h`.
+Third, add
 
 ```cpp
-int main_unity_default(int argc, char* argv[])
+custom_unity_init(argc, argv);
 ```
 
-#### Alter the swift application delegate and cerate a main.swift file
+above
 
-We have to get our initialization point done however, so we need some small additions/changes.
-
-Open your `AppDelegate.swift` you will see this at the top of the file:
-
-```swift
-@UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+```cpp
+return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
 ```
 
-All we are going to do is remove `@UIApplicationMain` so we
-are left with the following after we are done:
-
-```swift
-class AppDelegate: UIResponder, UIApplicationDelegate {
-```
-
-Now we need to let xcode know where our new main is. Go ahead and create
-a new swift file called `main.swift`. Paste this into it:
-
-```swift
-import Foundation
-import UIKit
-
-// overriding @UIApplicationMain
-// http://stackoverflow.com/a/24021180/1060314
-
-custom_unity_init(Process.argc, Process.unsafeArgv)
-UIApplicationMain(Process.argc, Process.unsafeArgv, NSStringFromClass(UIApplication), NSStringFromClass(AppDelegate))
-```
-
-Assuming your bridging header is properly registered, xcode will NOT be
-complaining about `custom_unity_init`. If it is, something is wrong with the
-bridging header registration. Go check that out.
-
-Note that if your `AppDelegate` is NOT called `AppDelegate` you will need to update
-the last  argument above in `UIApplicationMain(<argc>, <argv>, <UIApplication>, <here>)`
-to be whatever yours is called.
+Now go to Build Phases and search for `main.mm`. You should see two `main.mm` under `Compile sources`
+Remove the one located in Unity folder.
 
 #### Wrap the UnityAppController into your application delegate
 
 We are taking away control from the unity generated application delegate, we
 need to act as a proxy for it in our `AppDelegate`.
 
-First add the following variable to your `AppDelegate`
+First add the following variable to your `AppDelegate.h`
 
-```swift
-var currentUnityController: UnityAppController!
+```objc
+@property (nonatomic) UnityAppController *unityController;
 ```
 Now we need to initialize and proxy through the calls to the `UnityAppController`.
 All said and done you will be left with the following:
 
-```swift
-//
-//  AppDelegate.swift
-//
-//  Created by Adam Venturella on 10/28/15
-//
+```objc
+#import "AppDelegate.h"
 
-import UIKit
+@interface AppDelegate ()
 
-class AppDelegate: UIResponder, UIApplicationDelegate {
+@end
 
-    var window: UIWindow?
-    var currentUnityController: UnityAppController!
+@implementation AppDelegate
 
-
-    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
-        currentUnityController = UnityAppController()
-        currentUnityController.application(application, didFinishLaunchingWithOptions: launchOptions)
-        return true
-    }
-
-    func applicationWillResignActive(application: UIApplication) {
-        currentUnityController.applicationWillResignActive(application)
-    }
-
-    func applicationDidEnterBackground(application: UIApplication) {
-        currentUnityController.applicationDidEnterBackground(application)
-    }
-
-    func applicationWillEnterForeground(application: UIApplication) {
-        currentUnityController.applicationWillEnterForeground(application)
-    }
-
-    func applicationDidBecomeActive(application: UIApplication) {
-        currentUnityController.applicationDidBecomeActive(application)
-    }
-
-    func applicationWillTerminate(application: UIApplication) {
-        currentUnityController.applicationWillTerminate(application)
-    }
+-(BOOL)application:(UIApplication *)application willFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+    [self.unityController application:application willFinishLaunchingWithOptions:launchOptions];
+    return YES;
 }
 
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // Override point for customization after application launch.
+    [self.unityController application:application didFinishLaunchingWithOptions:launchOptions];
+    return YES;
+}
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
+    [self.unityController applicationWillResignActive:application];
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+    [self.unityController applicationDidEnterBackground:application];
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
+    [self.unityController applicationWillEnterForeground:application];
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+    [self.unityController applicationDidBecomeActive:application];
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    [self.unityController applicationWillTerminate:application];
+}
+
+-(void)applicationDidReceiveMemoryWarning:(UIApplication *)application
+{
+    [self.unityController applicationDidReceiveMemoryWarning:application];
+}
+
+#pragma mark - Lazy Load
+
+-(UnityAppController *)unityController
+{
+    if (!_unityController) {
+        _unityController = [[UnityAppController alloc] init];
+    }
+    return _unityController;
+}
+
+@end
 ```
 
 #### Adjust the `GetAppController` function in `UnityAppController.h`
@@ -312,67 +313,114 @@ inline UnityAppController*GetAppController()
 }
 ```
 
-Comment that out. You will end up with this:
-
-```objc
-//inline UnityAppController*GetAppController()
-//{
-//    return (UnityAppController*)[UIApplication sharedApplication].delegate;
-//}
-```
-
-Now we need to add a new version of this function:
+Replace that with this:
 
 ```objc
 NS_INLINE UnityAppController* GetAppController()
 {
     NSObject<UIApplicationDelegate>* delegate = [UIApplication sharedApplication].delegate;
-    UnityAppController* currentUnityController = (UnityAppController *)[delegate valueForKey:@"currentUnityController"];
-    return currentUnityController;
+    UnityAppController* unityController = (UnityAppController *)[delegate valueForKey:@"unityController"];
+    return unityController;
 }
 ```
 
 
+#### Make few adjustments to support Vuforia
+
+Locate the file `UnityAppController.h` in the xcode group `Unity/Classes/`.
+
+We need to update import statements for all frameworks. Replace `#import "framework"` with `#import <framework>`
+
+E.g.
+```objc
+#import <QuartzCore/CADisplayLink.h>
+#import <UIKit/UIKit.h>
+#import <QuartzCore/CADisplayLink.h>
+
+#include "PluginBase/RenderPluginDelegate.h"
+
+@class UnityView;
+@class DisplayConnection;
+@class UnityViewControllerBase;
+```
+
+Now open the `UnityAppController.mm` and import `VuforiaNativeRendererController.h`
+
+
+Next, locate the file `VuforiaNativeRendererController.mm` in the xcode group `Unity/Libraries/Plugins/iOS`.
+
+Comment out or remove the last line
+```cpp
+IMPL_APP_CONTROLLER_SUBCLASS(VuforiaNativeRendererController)
+```
+
+Next, copy the function
+```cpp
+- (void)shouldAttachRenderDelegate
+{
+	self.renderDelegate = [[VuforiaRenderDelegate alloc] init];
+
+// Unity native rendering callback plugin mechanism is only supported
+// from version 4.5 onwards
+#if UNITY_VERSION>434
+	UnityRegisterRenderingPlugin(&VuforiaSetGraphicsDevice, &VuforiaRenderEvent);
+#endif
+}
+```
+In `UnityAppController.h` you should find method with the same name, replace or update it with copied version.
+
+Next, copy the top part from `VuforiaNativeRendererController.mm`
+```cpp
+// Unity native rendering callback plugin mechanism is only supported
+// from version 4.5 onwards
+#if UNITY_VERSION>434
+
+// Exported methods for native rendering callback
+extern "C" void VuforiaSetGraphicsDevice(void* device, int deviceType, int eventType);
+extern "C" void VuforiaRenderEvent(int marker);
+
+#endif
+```
+And paste it into `UnityAppController.h`
+
 #### Go bananas, you did it! Add the unity view wherever you want!
 
-I happen to do this in a stock, single view application, so xcode generated a `ViewController.swift`
-file for me attached to a storyboard. Here is how I hooked up my little demo:
+I happen to do this in a stock, single view application, so xcode generated a `ViewController`
+files for me attached to a storyboard. Here is how I hooked up my little demo:
 
 ```swift
-//
-//  ViewController.swift
-//
-//  Created by Adam Venturella on 10/28/15.
-//
+#import "ViewController.h"
 
-import UIKit
+@interface ViewController ()
 
-class ViewController: UIViewController {
+@end
 
-    @IBAction func onLoadUnity(sender: AnyObject) {
-        loadUnity()
-    }
+@implementation ViewController
 
-    @IBAction func onCallUnity(sender: AnyObject) {
-        UnitySendMessage("EventBus", "Trigger", "Hello World")
-    }
-
-    func loadUnity(){
-
-        let unityView = UnityGetGLView()
-
-        self.view.addSubview(unityView)
-        unityView.translatesAutoresizingMaskIntoConstraints = false
-
-        // look, non-full screen unity content!
-        let views = ["view": unityView]
-        let w = NSLayoutConstraint.constraintsWithVisualFormat("|[view]-20-|", options: [], metrics: nil, views: views)
-        let h = NSLayoutConstraint.constraintsWithVisualFormat("V:|-75-[view]-50-|", options: [], metrics: nil, views: views)
-
-        view.addConstraints(w + h)
-    }
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view, typically from a nib.
 }
 
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (IBAction)openUnity:(id)sender
+{
+    UIView *unityView = UnityGetGLView();
+    [self.view addSubview:unityView];
+
+    unityView.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSDictionary *views = @{@"view": unityView};
+    NSArray *verticalConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"|[view]-0-|" options:0 metrics:nil views:views];
+    [self.view addConstraints:verticalConstraints];
+
+    NSArray *horizontalConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"V:|-0-[view]-0-|" options:0 metrics:nil views:views];
+    [self.view addConstraints:horizontalConstraints];
+}
 ```
 
 [www.the-nerd.be]: http://www.the-nerd.be/2015/08/20/a-better-way-to-integrate-unity3d-within-a-native-ios-application/  "The Nerd"
