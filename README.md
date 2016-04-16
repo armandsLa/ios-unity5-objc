@@ -176,14 +176,14 @@ The Unity.xcconfig we applied knows where they are for compiling purposes.
 #### Create and update a PrefixHeader.pch file
 
 This is all in the [www.the-nerd.be] video as well, begining at 14:55.
-Create a new `PrefixHeader.pch` file and place it in iOS project root directory, add file to your project and uncheck `Copy items if needed`.
-`Unity.xcconfig` will update Build Settings and link this file to your project.
+Create a new `PrefixHeader.pch` file and place it in project's root directory.
+`Unity.xcconfig` will update Build Settings and link this file for you.
 
-Next find the Unity Prefix.pch file, located in `Classes` folder. Copy the content and paste it into our `PrefixHeader.pch` file(between `#define PrefixHeader_pch` and `#endif`).
+Next find the Unity Prefix.pch file, located in `Classes` folder. Copy the content and paste it into our `PrefixHeader.pch`, between `#define PrefixHeader_pch` and `#endif`.
 
 Now add `#import "UnityAppController.h"` under `#import <UIKit/UIKit.h>`
 
-#### Add the `UnityUtils` folder in this repo
+#### Add the `UnityUtils` folder from this repo
 
 Copy these into our project.
 
@@ -204,9 +204,7 @@ to update your `UnityUtils.mm` file to match their initialization.
 
 Anyway, now we need to update our `main.m`.
 
-First, rename our `main.m` to `main.mm`.
-Second, import `UnityUtils.h`.
-Third, add
+Rename our `main.m` to `main.mm`, import `UnityUtils.h` and add
 
 ```cpp
 custom_unity_init(argc, argv);
@@ -354,7 +352,7 @@ Comment out or remove the last line
 IMPL_APP_CONTROLLER_SUBCLASS(VuforiaNativeRendererController)
 ```
 
-Next, copy the function
+Next, copy the `shouldAttachRenderDelegate` method
 ```cpp
 - (void)shouldAttachRenderDelegate
 {
