@@ -103,7 +103,7 @@ Set the project to use those settings.
 
 <img src="https://dl.dropboxusercontent.com/u/20065272/forums/github/ios-unity5/set_xcconfig.png">
 
-If you are using Cocoapods or have other xconfig already in use, you will have to manually add configs from file to Build Settings.
+If you are using Cocoapods or have other xconfig already in place, you will have to manually add configs from `Unity.xcconfig` to Build Settings
 
 #### Adjust 1 project dependent setting
 So that does a lot for you in terms of configuration, now we need to adjust 1 setting in it.
@@ -354,7 +354,7 @@ Comment out or remove the last line
 IMPL_APP_CONTROLLER_SUBCLASS(VuforiaNativeRendererController)
 ```
 
-Next, copy the `shouldAttachRenderDelegate` method
+Next, copy the `shouldAttachRenderDelegate` function
 ```cpp
 - (void)shouldAttachRenderDelegate
 {
@@ -367,7 +367,7 @@ Next, copy the `shouldAttachRenderDelegate` method
 #endif
 }
 ```
-In `UnityAppController.h` you should find method with the same name, replace or update it with copied version.
+In `UnityAppController.h` you should find function with the same name, replace or update it with copied version.
 
 Next, copy the top part from `VuforiaNativeRendererController.mm`
 ```cpp
