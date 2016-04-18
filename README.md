@@ -103,6 +103,8 @@ Set the project to use those settings.
 
 <img src="https://dl.dropboxusercontent.com/u/20065272/forums/github/ios-unity5/set_xcconfig.png">
 
+If you are using Cocoapods or have other xconfig already in use, you will have to manually add configs from file to Build Settings.
+
 #### Adjust 1 project dependent setting
 So that does a lot for you in terms of configuration, now we need to adjust 1 setting in it.
 Since we don't know where you decided to export your unity project too, you need to configure that.
@@ -380,6 +382,13 @@ extern "C" void VuforiaRenderEvent(int marker);
 #endif
 ```
 And paste it into `UnityAppController.h`
+
+Even though we added a run script for Unity `Data` folder to be copied, Vuforia requires `QCAR` folder to be added to our project.
+
+Go to your Unity build folder and locate `QCAR` folder under `Data/Raw`
+Drag this folder into our project, uncheck `Copy items if needed` and select `Create folder references `
+
+This is it. Vuforia should now work as intended.
 
 #### Go bananas, you did it! Add the unity view wherever you want!
 
