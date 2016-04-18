@@ -329,11 +329,10 @@ NS_INLINE UnityAppController* GetAppController()
 
 Locate the file `UnityAppController.h` in the xcode group `Unity/Classes/`.
 
-We need to import `QuartzCore/CADisplayLink.h` and `UIKit/UIKit.h` and reference `UnityViewControllerBase` class
+We need to import `UIKit/UIKit.h` and reference `UnityViewControllerBase` class
 
 It should look something like this
 ```objc
-#import <QuartzCore/CADisplayLink.h>
 #import <UIKit/UIKit.h>
 #import <QuartzCore/CADisplayLink.h>
 
